@@ -1,0 +1,95 @@
+
+通过这个脚本你可以充分理解到底文件系统是怎么从无到有的
+说明 基于Py3 
+
+可选选项有：
+mkdir() / creat() / open() / write() / close() / link()
+unlink()
+
+以上函数我都会在博客中慢慢更新（大概这周五之前会完成吧）
+你需要知道的一些概念：
+inode / inode 位图/ data / data 位图
+其中位图1表示已经分配了
+
+inodes 有三个部分组成
+1. 常规文件或者目录文件
+2. 所属block（此处可以是空文件，空文件块 address是-1）
+3. 链接计数号(就是FAT不支持的那种硬链接要用的)
+例如，下面这个就表示 常规文件 ， 空文件（a表示address），只有1个链接 
+[f a:-1 r:1]
+这个就是分配了10个块
+[f a:10 r:2]
+
+每个数据块包含  文件数据或者目录数据
+目录数据以键值对的方式展示
+(文件目录名， inumber号/也就是inode number)
+
+友情提醒， . 代表当前目录 ， ..代表父目录
+所以一个代表目录数据的空目录不是[],而是下面这个
+ [(.,0) (..,0)]
+所以我们添加一个文件文件名叫做“大家好我是一个文件”，就会变成这样
+[(.,0) (..,0) (“大家好我是一个文件”,1)]
+
+如果是文件数据 ，那么其中就用一个字符代表数据，例如下面事例的u，如果是空的，
+那就是简简单单的[]就可以了
+
+下面给出一个只有8bit的位图的文件系统供大家参考
+inode bitmap 11110000
+inodes       [d a:0 r:6] [f a:1 r:1] [f a:-1 r:1] [d a:2 r:2] [] ...
+data bitmap  11100000
+data         [(.,0) (..,0) (y,1) (z,2) (f,3)] [u] [(.,3) (..,0)] [] ...
+
+上面这个例子非常的有趣，我们来详细解读一下
+
+1. inode位图说  前4个inode已经被分配啦
+2. root目录（默认目录）说， 我的inode是 [d a:0 r:6] 我是个目录，我分配了data block
+的 第0号， 我被6个东西给链接了（为什么是6个大家可以自己想想）
+3. 到data [0]一看， 发现好家伙， "y" ---- inode是1 /以及后面的等等等
+4. 再来看y ,常规文件，分配到1 ，1个链接，data[1] 发现里面就存了个u
+5. z 一看就是个空文件
+6. f 一看就是个目录文件，但是里面只包括了自己的. 和 ..
+
+------------------------------------------------------
+基础讲完了，来看看这个东西怎么用
+
+
+prompt> vsfs.py -h
+Usage: vsfs.py [options]
+可选参数 随机数种子，inodes个数，data个数 , 打印ops ,打印最终结果, 计算结果
+
+Options:
+  -h, --help            show this help message and exit
+  -s SEED, --seed=SEED  the random seed
+  -i NUMINODES, --numInodes=NUMINODES 
+                        number of inodes in file system
+  -d NUMDATA, --numData=NUMDATA 
+                        number of data blocks in file system
+  -n NUMREQUESTS, --numRequests=NUMREQUESTS 
+                        number of requests to simulate
+  -r, --reverse         instead of printing state, print ops
+  -p, --printFinal      print the final set of files/dirs
+  -c, --compute         compute answers for me
+]
+
+举个例子，你输入
+prompt> ./vsfs.py -n 6 -s 16
+就是一共进行6个操作，随机数种子是16
+
+prompt> vsfs.py -n 6 -s 16 -c
+这个会把答案打出来
+
+好了还不快去玩耍🐎？
+
+
+
+
+
+
+
+
+
+
+
+
+
+
